@@ -14,7 +14,7 @@ import bitsandbytes as bnb
 """
 
 from peft import (
-    LoraConfig,
+    AdaptionPromptConfig,
     get_peft_model,
     get_peft_model_state_dict,
     prepare_model_for_int8_training,
@@ -166,12 +166,9 @@ def train(
 
     model = prepare_model_for_int8_training(model)
 
-    config = LoraConfig(
-        r=lora_r,
-        lora_alpha=lora_alpha,
-        target_modules=lora_target_modules,
-        lora_dropout=lora_dropout,
-        bias="none",
+    config = AdaptionPromptConfig(
+        adapter_layers=30,  # layers (L)
+        adapter_length=10,  # prompt length (K)
         task_type="CAUSAL_LM",
     )
     model = get_peft_model(model, config)

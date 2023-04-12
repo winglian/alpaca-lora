@@ -37,14 +37,9 @@ def train(
     learning_rate: float = 3e-4,
     cutoff_len: int = 256,
     val_set_size: int = 2000,
-    # lora hyperparams
-    lora_r: int = 8,
-    lora_alpha: int = 16,
-    lora_dropout: float = 0.05,
-    lora_target_modules: List[str] = [
-        "q_proj",
-        "v_proj",
-    ],
+    # adapter hpyerparams
+    adapter_layers: int = 30,
+    adapter_len: int = 10,
     # llm hyperparams
     train_on_inputs: bool = True,  # if False, masks out inputs in loss
     group_by_length: bool = False,  # faster, but produces an odd training loss curve
@@ -68,10 +63,8 @@ def train(
             f"learning_rate: {learning_rate}\n"
             f"cutoff_len: {cutoff_len}\n"
             f"val_set_size: {val_set_size}\n"
-            f"lora_r: {lora_r}\n"
-            f"lora_alpha: {lora_alpha}\n"
-            f"lora_dropout: {lora_dropout}\n"
-            f"lora_target_modules: {lora_target_modules}\n"
+            f"adapter_layers: {adapter_layers}\n"
+            f"adapter_len: {adapter_len}\n"
             f"train_on_inputs: {train_on_inputs}\n"
             f"group_by_length: {group_by_length}\n"
             f"wandb_project: {wandb_project}\n"
@@ -167,11 +160,13 @@ def train(
     model = prepare_model_for_int8_training(model)
 
     config = AdaptionPromptConfig(
-        adapter_layers=30,  # layers (L)
-        adapter_length=10,  # prompt length (K)
+        adapter_layers=adapter_layers,  # layers (L)
+        adapter_len=adapter_len,  # prompt length (K)
         task_type="CAUSAL_LM",
     )
     model = get_peft_model(model, config)
+    if ddp:
+        model.to("cuda:{}".format(os.environ.get("LOCAL_RANK", 0)))
 
     if data_path.endswith(".json") or data_path.endswith(".jsonl"):
         data = load_dataset("json", data_files=data_path)
